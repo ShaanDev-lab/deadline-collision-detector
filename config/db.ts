@@ -1,0 +1,95 @@
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+let pool: mysql.Pool | null = null;
+
+export const getDB = async () => {
+  if (!pool) {
+    try {
+      const dbConfig = {
+        host: process.env.DB_HOST || 'localhost',
+        port: Number(process.env.DB_PORT) || 3306,
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'deadline_db',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+      };
+
+      pool = mysql.createPool(dbConfig);
+
+      // Test the connection immediately
+      await pool.getConnection();
+      console.log('✅ Successfully connected to MySQL database.');
+
+      // Auto-create tables for first-time setup
+      // 1. Users table
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS users (
+          user_id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 2. Subjects table
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS subjects (
+          subject_id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT,
+          subject_name VARCHAR(100) NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        )
+      `);
+
+      // 3. Tasks table (Updated to include subject_id)
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS tasks (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          subject_id INT,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          deadline DATETIME NOT NULL,
+          category VARCHAR(50),
+          priority INT DEFAULT 1,
+          status VARCHAR(20) DEFAULT 'Pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE SET NULL
+        )
+      `);
+
+      // Self-healing: Ensure subject_id exists if the table was created previously
+      try {
+        await pool.execute('ALTER TABLE tasks ADD COLUMN subject_id INT AFTER id');
+        await pool.execute('ALTER TABLE tasks ADD FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE SET NULL');
+      } catch (e) {
+        // Column already exists, ignore error
+      }
+
+      // 4. Collision Alerts table
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS collision_alerts (
+          alert_id INT AUTO_INCREMENT PRIMARY KEY,
+          task1_id INT,
+          task2_id INT,
+          message TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (task1_id) REFERENCES tasks(id) ON DELETE CASCADE,
+          FOREIGN KEY (task2_id) REFERENCES tasks(id) ON DELETE CASCADE
+        )
+      `);
+
+    } catch (error: any) {
+      console.error('❌ DATABASE CONNECTION ERROR:');
+      console.error(`Message: ${error.message}`);
+      console.error('--------------------------------------------------');
+      pool = null;
+    }
+  }
+  return pool;
+};
