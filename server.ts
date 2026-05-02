@@ -1,7 +1,13 @@
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import path from "path";
 import cors from "cors";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, ".env.local") });
+
 import taskRoutes from "./routes/taskRoutes.js";
 import subjectRoutes from "./routes/subjectRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
