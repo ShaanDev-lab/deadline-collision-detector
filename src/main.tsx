@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { ClerkProvider } from "@clerk/react";
-import { ThemeProvider } from "./ThemeProvider.tsx";
+import { ThemeProvider } from "./providers";
 
 const PUBLISHABLE_KEY = (import.meta as any).env.VITE_CLERK_PUBLISHABLE_KEY;
 

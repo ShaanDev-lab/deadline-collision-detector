@@ -11,6 +11,7 @@ dotenv.config({ path: path.join(__dirname, ".env.local") });
 import taskRoutes from "./routes/taskRoutes.js";
 import subjectRoutes from "./routes/subjectRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import suggestionRoutes from "./routes/suggestionRoutes.js";
 
 async function startServer() {
   const app = express();
@@ -24,6 +25,7 @@ async function startServer() {
   app.use("/api/tasks", taskRoutes);
   app.use("/api/subjects", subjectRoutes);
   app.use("/api/users", userRoutes);
+  app.use("/api/suggestions", suggestionRoutes);
 
   // Health check
   app.get("/api/health", (req, res) => {

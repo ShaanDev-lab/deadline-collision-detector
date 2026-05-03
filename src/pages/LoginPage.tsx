@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "motion/react";
 import { Bell } from "lucide-react";
 import { SignInButton, SignUpButton } from "@clerk/react";
-import { ThemeToggle } from "../components/ThemeToggle";
+import { ThemeToggle } from "../components/common";
 
 export default function LoginPage() {
   return (
