@@ -75,6 +75,59 @@ export class TaskModel {
       ORDER BY a.deadline ASC
     `);
     
-    return rows as any[];
+    const clashes = rows as any[];
+
+    // Import here to avoid circular dependency issues if any
+    const { SuggestionModel } = await import('./suggestionModel.js');
+    const allTasks = await this.getAll();
+
+    for (const clash of clashes) {
+      const task1 = allTasks.find(t => t.id === clash.task1_id);
+      const task2 = allTasks.find(t => t.id === clash.task2_id);
+      
+      if (!task1 || !task2) continue;
+
+      let taskToReschedule = task2;
+      if (task1.priority < task2.priority) {
+        taskToReschedule = task1;
+      } else if (task1.priority === task2.priority) {
+        if (new Date(task1.deadline) > new Date(task2.deadline)) {
+          taskToReschedule = task1;
+        }
+      }
+
+      // Check if it already has a pending suggestion
+      const existing = await SuggestionModel.getSuggestionByTaskId(taskToReschedule.id);
+      if (!existing) {
+        let proposedDate = new Date(taskToReschedule.deadline);
+        let found = false;
+        
+        while (!found) {
+          proposedDate.setDate(proposedDate.getDate() + 1);
+          
+          let hasClash = false;
+          for (const t of allTasks) {
+            if (t.id === taskToReschedule.id) continue;
+            
+            const tDate = new Date(t.deadline);
+            const diffHours = Math.abs(tDate.getTime() - proposedDate.getTime()) / (1000 * 60 * 60);
+            
+            if (diffHours < 24) {
+              hasClash = true;
+              break;
+            }
+          }
+          
+          if (!hasClash) {
+            found = true;
+          }
+        }
+        
+        const formattedDate = proposedDate.toISOString().slice(0, 19).replace('T', ' ');
+        await SuggestionModel.createSuggestion(taskToReschedule.id, formattedDate);
+      }
+    }
+    
+    return clashes;
   }
 }

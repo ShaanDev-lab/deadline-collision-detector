@@ -86,3 +86,14 @@ JOIN
     tasks t2 ON t1.task_id < t2.task_id
 WHERE 
     ABS(DATEDIFF(t1.deadline, t2.deadline)) <= 1;
+
+-- 5. Create reschedule_suggestions table
+-- Purpose: store automatically generated suggestions for clashing tasks
+CREATE TABLE reschedule_suggestions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    task_id INT NOT NULL,
+    suggested_date DATETIME NOT NULL,
+    status VARCHAR(20) DEFAULT 'Pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
