@@ -162,7 +162,7 @@ function TaskCard({
           </span>
         </div>
         {clashing ? (
-          <div className="flex items-center gap-1 font-bold text-[10px] uppercase tracking-widest px-2 py-1 bg-black dark:bg-white text-white dark:text-black">
+          <div className="flex items-center gap-1 font-bold text-[10px] uppercase tracking-widest px-2 py-1 bg-red-600 text-white dark:bg-red-500">
             <AlertTriangle size={12} />
             Clash
           </div>

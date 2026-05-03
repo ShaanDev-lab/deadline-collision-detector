@@ -39,7 +39,7 @@ export class SuggestionModel {
     const db = await getDB();
     if (!db) throw new Error('Database connection failed');
     const [rows]: any = await db.execute(
-      'SELECT * FROM reschedule_suggestions WHERE task_id = ? AND status = "Pending"',
+      'SELECT * FROM reschedule_suggestions WHERE task_id = ? ORDER BY id DESC LIMIT 1',
       [taskId]
     );
     return rows[0] || null;

@@ -96,9 +96,9 @@ export class TaskModel {
         }
       }
 
-      // Check if it already has a pending suggestion
+      // Check if it already has a pending or rejected suggestion
       const existing = await SuggestionModel.getSuggestionByTaskId(taskToReschedule.id);
-      if (!existing) {
+      if (!existing || existing.status === 'Accepted') {
         let proposedDate = new Date(taskToReschedule.deadline);
         let found = false;
         
