@@ -6,8 +6,11 @@ export interface Task {
   description: string;
   deadline: string;
   category: string;
-  priority: number;
+  estimated_effort: number;
+  category_weight?: number;
+  priority_score?: number;
   created_at?: string;
+  subject_id?: number;
 }
 
 export class TaskModel {
@@ -26,29 +29,29 @@ export class TaskModel {
   }
 
   static async create(taskData: Omit<Task, 'id'>): Promise<number> {
-    const { title, description, deadline, category, priority, subject_id } = taskData as any;
+    const { title, description, deadline, category, estimated_effort, subject_id } = taskData as any;
     const db = await getDB();
     if (!db) throw new Error('Database connection not available');
     
     const subId = subject_id && subject_id !== '' ? parseInt(subject_id) : null;
 
     const [result]: any = await db.execute(
-      'INSERT INTO tasks (title, description, deadline, category, priority, subject_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [title, description, deadline, category, priority, subId]
+      'INSERT INTO tasks (title, description, deadline, category, estimated_effort, subject_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [title, description, deadline, category, estimated_effort, subId]
     );
     return result.insertId;
   }
 
   static async update(id: string | number, taskData: Partial<Task>): Promise<boolean> {
-    const { title, description, deadline, category, priority, subject_id } = taskData as any;
+    const { title, description, deadline, category, estimated_effort, subject_id } = taskData as any;
     const db = await getDB();
     if (!db) throw new Error('Database connection not available');
     
     const subId = subject_id && subject_id !== '' ? parseInt(subject_id) : null;
 
     await db.execute(
-      'UPDATE tasks SET title = ?, description = ?, deadline = ?, category = ?, priority = ?, subject_id = ? WHERE id = ?',
-      [title, description, deadline, category, priority, subId, id]
+      'UPDATE tasks SET title = ?, description = ?, deadline = ?, category = ?, estimated_effort = ?, subject_id = ? WHERE id = ?',
+      [title, description, deadline, category, estimated_effort, subId, id]
     );
     return true;
   }
@@ -87,10 +90,13 @@ export class TaskModel {
       
       if (!task1 || !task2) continue;
 
+      const p1 = task1.priority_score || 0;
+      const p2 = task2.priority_score || 0;
+
       let taskToReschedule = task2;
-      if (task1.priority < task2.priority) {
+      if (p1 < p2) {
         taskToReschedule = task1;
-      } else if (task1.priority === task2.priority) {
+      } else if (p1 === p2) {
         if (new Date(task1.deadline) > new Date(task2.deadline)) {
           taskToReschedule = task1;
         }

@@ -28,7 +28,26 @@ CREATE TABLE tasks (
     title VARCHAR(255) NOT NULL,
     task_type ENUM('Assignment', 'Exam', 'Lab', 'Viva') NOT NULL,
     deadline DATETIME NOT NULL,
-    priority INT DEFAULT 1, -- 1: Low, 2: Medium, 3: High
+    category VARCHAR(50),
+    estimated_effort INT DEFAULT 1, -- scale 1-10
+    category_weight INT GENERATED ALWAYS AS (
+      CASE category
+        WHEN 'Exam'       THEN 4
+        WHEN 'Quiz'       THEN 3
+        WHEN 'Project'    THEN 2
+        WHEN 'Assignment' THEN 1
+        ELSE 1
+      END
+    ) STORED,
+    priority_score INT GENERATED ALWAYS AS (
+      CASE category
+        WHEN 'Exam'       THEN 4
+        WHEN 'Quiz'       THEN 3
+        WHEN 'Project'    THEN 2
+        WHEN 'Assignment' THEN 1
+        ELSE 1
+      END * estimated_effort
+    ) STORED,
     status ENUM('Pending', 'Completed') DEFAULT 'Pending',
     FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE
 );

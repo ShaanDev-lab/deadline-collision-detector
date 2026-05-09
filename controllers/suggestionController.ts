@@ -40,7 +40,7 @@ export const acceptSuggestion = async (req: Request, res: Response) => {
         description: task.description,
         deadline: formattedDate,
         category: task.category,
-        priority: task.priority,
+        estimated_effort: task.estimated_effort,
         subject_id: (task as any).subject_id
       });
     }

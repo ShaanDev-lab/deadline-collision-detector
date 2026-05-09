@@ -59,7 +59,25 @@ export const getDB = async () => {
           description TEXT,
           deadline DATETIME NOT NULL,
           category VARCHAR(50),
-          priority INT DEFAULT 1,
+          estimated_effort INT DEFAULT 1,
+          category_weight INT GENERATED ALWAYS AS (
+            CASE category
+              WHEN 'Exam'       THEN 4
+              WHEN 'Quiz'       THEN 3
+              WHEN 'Project'    THEN 2
+              WHEN 'Assignment' THEN 1
+              ELSE 1
+            END
+          ) STORED,
+          priority_score INT GENERATED ALWAYS AS (
+            CASE category
+              WHEN 'Exam'       THEN 4
+              WHEN 'Quiz'       THEN 3
+              WHEN 'Project'    THEN 2
+              WHEN 'Assignment' THEN 1
+              ELSE 1
+            END * estimated_effort
+          ) STORED,
           status VARCHAR(20) DEFAULT 'Pending',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE SET NULL
@@ -76,6 +94,45 @@ export const getDB = async () => {
         );
       } catch (e) {
         // Column already exists, ignore error
+      }
+      
+      // Self-healing: Add estimated_effort
+      try {
+        await pool.execute(
+          "ALTER TABLE tasks ADD COLUMN estimated_effort INT DEFAULT 1 AFTER category",
+        );
+      } catch (e) {
+        // Column already exists, ignore error
+      }
+
+      // Self-healing: Add generated columns
+      try {
+        await pool.execute(`
+          ALTER TABLE tasks 
+          ADD COLUMN category_weight INT GENERATED ALWAYS AS (
+            CASE category
+              WHEN 'Exam'       THEN 4
+              WHEN 'Quiz'       THEN 3
+              WHEN 'Project'    THEN 2
+              WHEN 'Assignment' THEN 1
+              ELSE 1
+            END
+          ) STORED AFTER estimated_effort
+        `);
+        await pool.execute(`
+          ALTER TABLE tasks 
+          ADD COLUMN priority_score INT GENERATED ALWAYS AS (
+            CASE category
+              WHEN 'Exam'       THEN 4
+              WHEN 'Quiz'       THEN 3
+              WHEN 'Project'    THEN 2
+              WHEN 'Assignment' THEN 1
+              ELSE 1
+            END * estimated_effort
+          ) STORED AFTER category_weight
+        `);
+      } catch (e) {
+        // Columns already exist, ignore error
       }
 
       // 4. Collision Alerts table

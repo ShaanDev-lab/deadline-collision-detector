@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import React, { createContext, useContext, useEffect, useState, type FormEvent, ReactNode } from "react";
 import { useUser } from "@clerk/react";
 
 export interface Subject {
@@ -12,7 +12,9 @@ export interface Task {
   description: string;
   deadline: string;
   category: string;
-  priority: number;
+  estimated_effort: number;
+  category_weight?: number;
+  priority_score?: number;
   created_at: string;
   subject_id?: number;
 }
@@ -45,7 +47,7 @@ export interface TaskFormState {
   description: string;
   deadline: string;
   category: string;
-  priority: number;
+  estimated_effort: number;
   subject_id: string;
 }
 
@@ -54,7 +56,7 @@ const emptyFormState: TaskFormState = {
   description: "",
   deadline: "",
   category: "General",
-  priority: 1,
+  estimated_effort: 1,
   subject_id: "",
 };
 
@@ -78,7 +80,39 @@ export const getRelativeTime = (dateString: string) => {
   return `In ${diffDays} days`;
 };
 
-export function useCollisionDashboard() {
+
+interface CollisionContextType {
+  tasks: Task[];
+  clashes: Clash[];
+  suggestions: Suggestion[];
+  loading: boolean;
+  showForm: boolean;
+  editingTask: Task | null;
+  error: string | null;
+  subjects: Subject[];
+  showSubjectForm: boolean;
+  newSubjectName: string;
+  deleteConfirmation: DeleteConfirmationState;
+  formData: TaskFormState;
+  setShowForm: (show: boolean) => void;
+  setShowSubjectForm: (show: boolean) => void;
+  setNewSubjectName: (name: string) => void;
+  setFormData: (data: TaskFormState) => void;
+  setDeleteConfirmation: (data: DeleteConfirmationState) => void;
+  openCreateTask: () => void;
+  startEdit: (task: Task) => void;
+  handleSubmit: (e: FormEvent) => Promise<void>;
+  handleAddSubject: (e: FormEvent) => Promise<void>;
+  handleDeleteSubject: (id: number, name: string) => void;
+  handleDelete: (id: number, title: string) => void;
+  confirmDelete: () => Promise<void>;
+  isClashing: (taskId: number) => boolean;
+  handleSuggestion: (suggestionId: number, action: "accept" | "reject") => Promise<void>;
+}
+
+const CollisionContext = createContext<CollisionContextType | undefined>(undefined);
+
+export function CollisionProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clashes, setClashes] = useState<Clash[]>([]);
@@ -190,7 +224,7 @@ export function useCollisionDashboard() {
       description: task.description,
       deadline: new Date(task.deadline).toISOString().slice(0, 16),
       category: task.category,
-      priority: task.priority || 1,
+      estimated_effort: task.estimated_effort || 1,
       subject_id: task.subject_id ? task.subject_id.toString() : "",
     });
     setShowForm(true);
@@ -305,32 +339,44 @@ export function useCollisionDashboard() {
     }
   };
 
-  return {
-    tasks,
-    clashes,
-    suggestions,
-    loading,
-    showForm,
-    editingTask,
-    error,
-    subjects,
-    showSubjectForm,
-    newSubjectName,
-    deleteConfirmation,
-    formData,
-    setShowForm,
-    setShowSubjectForm,
-    setNewSubjectName,
-    setFormData,
-    setDeleteConfirmation,
-    openCreateTask,
-    startEdit,
-    handleSubmit,
-    handleAddSubject,
-    handleDeleteSubject,
-    handleDelete,
-    confirmDelete,
-    isClashing,
-    handleSuggestion,
-  };
+  return (
+    <CollisionContext.Provider value={{
+      tasks,
+      clashes,
+      suggestions,
+      loading,
+      showForm,
+      editingTask,
+      error,
+      subjects,
+      showSubjectForm,
+      newSubjectName,
+      deleteConfirmation,
+      formData,
+      setShowForm,
+      setShowSubjectForm,
+      setNewSubjectName,
+      setFormData,
+      setDeleteConfirmation,
+      openCreateTask,
+      startEdit,
+      handleSubmit,
+      handleAddSubject,
+      handleDeleteSubject,
+      handleDelete,
+      confirmDelete,
+      isClashing,
+      handleSuggestion,
+    }}>
+      {children}
+    </CollisionContext.Provider>
+  );
+}
+
+export function useCollisionData() {
+  const context = useContext(CollisionContext);
+  if (context === undefined) {
+    throw new Error("useCollisionData must be used within a CollisionProvider");
+  }
+  return context;
 }
