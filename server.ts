@@ -12,6 +12,7 @@ import taskRoutes from "./routes/taskRoutes.js";
 import subjectRoutes from "./routes/subjectRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import suggestionRoutes from "./routes/suggestionRoutes.js";
+import { getDB } from "./config/db.js";
 
 async function startServer() {
   const app = express();
@@ -20,6 +21,30 @@ async function startServer() {
   // Middleware
   app.use(cors());
   app.use(express.json());
+
+  // Auth Middleware
+  app.use(async (req, res, next) => {
+    if (req.path === '/api/users/sync' || req.path === '/api/health') return next();
+    if (req.path.startsWith('/api/')) {
+      const email = req.headers['x-user-email'];
+      if (!email) {
+        return res.status(401).json({ message: 'Unauthorized: Missing x-user-email header' });
+      }
+      try {
+        const db = await getDB();
+        if (!db) return res.status(500).json({ message: 'DB Error' });
+        const [rows]: any = await db.execute('SELECT user_id FROM users WHERE email = ?', [email]);
+        if (rows.length === 0) {
+          return res.status(401).json({ message: 'Unauthorized: User not found' });
+        }
+        res.locals.userId = rows[0].user_id;
+      } catch (err) {
+        console.error('Auth error', err);
+        return res.status(500).json({ message: 'Auth error' });
+      }
+    }
+    next();
+  });
 
   // API Routes
   app.use("/api/tasks", taskRoutes);
